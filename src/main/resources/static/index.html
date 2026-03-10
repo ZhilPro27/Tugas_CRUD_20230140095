@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manajemen Data KTP</title>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f4f7f6;
+            margin: 0;
+            padding: 20px;
+        }
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: #fff;
+            padding: 20px 30px;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        h1, h2 {
+            color: #333;
+            text-align: center;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: #555;
+        }
+        .form-group input, .form-group select, .form-group textarea {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        .btn {
+            padding: 10px 15px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            color: #fff;
+        }
+        .btn-primary { background-color: #007bff; }
+        .btn-primary:hover { background-color: #0056b3; }
+        .btn-warning { background-color: #ffc107; color: #212529; }
+        .btn-warning:hover { background-color: #e0a800; }
+        .btn-danger { background-color: #dc3545; }
+        .btn-danger:hover { background-color: #c82333; }
+        .btn-secondary { background-color: #6c757d; }
+        .btn-secondary:hover { background-color: #5a6268; }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        table, th, td {
+            border: 1px solid #ddd;
+        }
+        th, td {
+            padding: 12px;
+            text-align: left;
+        }
+        th {
+            background-color: #007bff;
+            color: white;
+        }
+        tr:nth-child(even) { background-color: #f2f2f2; }
+
+        .action-buttons {
+            display: flex;
+            gap: 5px;
+        }
+
+        /* Notifikasi */
+        #notification {
+            display: none;
+            padding: 15px;
+            margin-bottom: 20px;
+            border-radius: 4px;
+            font-weight: bold;
+            text-align: center;
+        }
+        .alert-success { background-color: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .alert-danger { background-color: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>Manajemen Data KTP</h1>
+
+    <div id="notification"></div>
+
+    <div style="background: #f9f9f9; padding: 20px; border-radius: 5px; margin-bottom: 30px;">
+        <h2 id="formTitle">Tambah Data KTP Baru</h2>
+        <form id="ktpForm">
+            <input type="hidden" id="ktpId" name="id">
+
+            <div class="form-group">
+                <label for="nomorKtp">Nomor KTP (NIK)</label>
+                <input type="text" id="nomorKtp" name="nomorKtp" required placeholder="Masukkan NIK 16 digit" maxlength="16">
+                <small id="nikError" style="color: #dc3545; display: none; margin-top: 5px; font-weight: bold;"></small>
+            </div>
+            <div class="form-group">
+                <label for="namaLengkap">Nama Lengkap</label>
+                <input type="text" id="namaLengkap" name="namaLengkap" required placeholder="Masukkan Nama Lengkap">
+            </div>
+            <div class="form-group">
+                <label for="alamat">Alamat</label>
+                <textarea id="alamat" name="alamat" rows="3" required placeholder="Masukkan Alamat Lengkap"></textarea>
+            </div>
+            <div class="form-group">
+                <label for="tanggalLahir">Tanggal Lahir</label>
+                <input type="date" id="tanggalLahir" name="tanggalLahir" required>
+            </div>
+            <div class="form-group">
+                <label for="jenisKelamin">Jenis Kelamin</label>
+                <select id="jenisKelamin" name="jenisKelamin" required>
+                    <option value="" disabled selected>Pilih Jenis Kelamin</option>
+                    <option value="Laki-Laki">Laki-Laki</option>
+                    <option value="Perempuan">Perempuan</option>
+                </select>
+            </div>
+            <button type="submit" class="btn btn-primary" id="btnSubmit">Simpan Data</button>
+            <button type="button" class="btn btn-secondary" id="btnCancel" style="display:none;" onclick="resetForm()">Batal Edit</button>
+        </form>
+    </div>
+
+    <h2>Daftar KTP</h2>
+    <table>
+        <thead>
+        <tr>
+            <th>No</th>
+            <th>Nomor KTP</th>
+            <th>Nama Lengkap</th>
+            <th>Alamat</th>
+            <th>Tanggal Lahir</th>
+            <th>Jenis Kelamin</th>
+            <th>Aksi</th>
+        </tr>
+        </thead>
+        <tbody id="ktpTableBody">
+        </tbody>
+    </table>
+</div>
+
+<script>
+    // Sesuaikan URL ini dengan endpoint API Spring Boot kamu
+    const apiUrl = 'http://localhost:8080/ktp';
+
+    $(document).ready(function() {
+        // Load data pertama kali saat halaman dibuka
+        loadData();
+
+        $('#nomorKtp').on('input', function() {
+            this.value = this.value.replace(/[^0-9]/g, '');
+
+            // Sembunyikan pesan error dan kembalikan warna border saat user mulai mengetik
+            $('#nikError').hide();
+            $(this).css('border', '1px solid #ccc');
+        });
+
+        // Handle Submit Form (Bisa untuk POST atau PUT)
+        $('#ktpForm').submit(function(e) {
+            e.preventDefault(); // Mencegah halaman refresh
+
+            const nomorKtpValue = $('#nomorKtp').val();
+
+            if (nomorKtpValue.length !== 16) {
+                // Tampilkan pesan detail berapa digit yang kurang
+                $('#nikError')
+                    .text(`NIK harus tepat 16 digit! (Saat ini: ${nomorKtpValue.length} digit)`)
+                    .show(); // Munculkan teks merah
+
+                $('#nomorKtp')
+                    .css('border', '2px solid #dc3545') // Ubah border jadi merah tebal
+                    .focus(); // Arahkan fokus ke input
+                return; // Hentikan proses
+            }
+
+            const id = $('#ktpId').val();
+            const dataKtp = {
+                nomorKtp: $('#nomorKtp').val(),
+                namaLengkap: $('#namaLengkap').val(),
+                alamat: $('#alamat').val(),
+                tanggalLahir: $('#tanggalLahir').val(),
+                jenisKelamin: $('#jenisKelamin').val()
+            };
+
+            if (id) {
+                // Jika ID ada, lakukan operasi PUT (Update)
+                updateData(id, dataKtp);
+            } else {
+                // Jika tidak ada ID, lakukan operasi POST (Create)
+                createData(dataKtp);
+            }
+        });
+    });
+
+    // Fungsi GET: Mengambil data dari API
+    function loadData() {
+        $.ajax({
+            url: apiUrl,
+            method: 'GET',
+            success: function(response) {
+                let rows = '';
+                // Asumsikan response adalah array of object
+                $.each(response.data, function(index, ktp) {
+                    rows += `
+                        <tr>
+                            <td>${index + 1}</td>
+                            <td>${ktp.nomorKtp}</td>
+                            <td>${ktp.namaLengkap}</td>
+                            <td>${ktp.alamat}</td>
+                            <td>${ktp.tanggalLahir}</td>
+                            <td>${ktp.jenisKelamin}</td>
+                            <td class="action-buttons">
+                                <button class="btn btn-warning btn-sm" onclick='editData(${JSON.stringify(ktp)})'>Edit</button>
+                                <button class="btn btn-danger btn-sm" onclick="deleteData(${ktp.id})">Hapus</button>
+                            </td>
+                        </tr>
+                    `;
+                });
+                $('#ktpTableBody').html(rows);
+            },
+            error: function(err) {
+                showNotification('Gagal mengambil data dari server!', 'danger');
+                console.error(err);
+            }
+        });
+    }
+
+    // Fungsi POST: Menambah data baru
+    function createData(dataKtp) {
+        $.ajax({
+            url: apiUrl,
+            method: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify(dataKtp),
+            success: function(response) {
+                showNotification('Data KTP berhasil ditambahkan!', 'success');
+                resetForm();
+                loadData();
+            },
+            error: function(err) {
+                showNotification('Gagal menambahkan data! Pastikan NIK unik dan server berjalan.', 'danger');
+                console.error(err);
+            }
+        });
+    }
+
+    // Fungsi PUT: Memperbarui data yang ada
+    function updateData(id, dataKtp) {
+        $.ajax({
+            url: `${apiUrl}/${id}`,
+            method: 'PUT',
+            contentType: 'application/json',
+            data: JSON.stringify(dataKtp),
+            success: function(response) {
+                showNotification('Data KTP berhasil diperbarui!', 'success');
+                resetForm();
+                loadData();
+            },
+            error: function(err) {
+                showNotification('Gagal memperbarui data!', 'danger');
+                console.error(err);
+            }
+        });
+    }
+
+    // Fungsi DELETE: Menghapus data berdasarkan ID
+    function deleteData(id) {
+        if (confirm('Apakah Anda yakin ingin menghapus data ini?')) {
+            $.ajax({
+                url: `${apiUrl}/${id}`,
+                method: 'DELETE',
+                success: function(response) {
+                    showNotification('Data KTP berhasil dihapus!', 'success');
+                    loadData();
+                },
+                error: function(err) {
+                    showNotification('Gagal menghapus data!', 'danger');
+                    console.error(err);
+                }
+            });
+        }
+    }
+
+    // Fungsi untuk mengisi form saat tombol Edit ditekan
+    function editData(ktp) {
+        $('#ktpId').val(ktp.id);
+        $('#nomorKtp').val(ktp.nomorKtp);
+        $('#namaLengkap').val(ktp.namaLengkap);
+        $('#alamat').val(ktp.alamat);
+        $('#tanggalLahir').val(ktp.tanggalLahir);
+        $('#jenisKelamin').val(ktp.jenisKelamin);
+
+        $('#formTitle').text('Edit Data KTP');
+        $('#btnSubmit').text('Update Data').removeClass('btn-primary').addClass('btn-warning');
+        $('#btnCancel').show();
+
+        // Scroll ke atas agar user melihat form
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    // Fungsi untuk mereset form ke kondisi awal (Tambah Data)
+    function resetForm() {
+        $('#ktpForm')[0].reset();
+        $('#ktpId').val(''); // Kosongkan hidden ID
+        $('#formTitle').text('Tambah Data KTP Baru');
+        $('#btnSubmit').text('Simpan Data').removeClass('btn-warning').addClass('btn-primary');
+        $('#btnCancel').hide();
+    }
+
+    // Fungsi untuk menampilkan feedback/notifikasi
+    function showNotification(message, type) {
+        const notifBox = $('#notification');
+        notifBox.removeClass('alert-success alert-danger')
+                .addClass(type === 'success' ? 'alert-success' : 'alert-danger')
+                .text(message)
+                .fadeIn();
+
+        // Hilangkan notifikasi setelah 3 detik
+        setTimeout(function() {
+            notifBox.fadeOut();
+        }, 3000);
+    }
+</script>
+
+</body>
+</html>
