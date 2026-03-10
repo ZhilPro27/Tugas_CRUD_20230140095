@@ -18,7 +18,7 @@ public class KtpController {
     private KtpService ktpService;
 
     @PostMapping(
-            path = "/api/ktp",
+            path = "/ktp",
             consumes = MediaType.APPLICATION_JSON_VALUE,
             produces = MediaType.APPLICATION_JSON_VALUE
     )
@@ -31,7 +31,7 @@ public class KtpController {
     }
 
     @GetMapping(
-            path = "/api/ktp",
+            path = "/ktp",
             produces = MediaType.APPLICATION_JSON_VALUE
     )
     public ResponseEntity<Map<String, Object>> getAllKtp() {
@@ -42,7 +42,7 @@ public class KtpController {
     }
 
     @GetMapping(
-            path = "/api/ktp/{id}",
+            path = "/ktp/{id}",
             produces = MediaType.APPLICATION_JSON_VALUE
     )
     public ResponseEntity<Map<String, Object>> getAllKtById(@PathVariable("id") int id) {
@@ -53,7 +53,7 @@ public class KtpController {
     }
 
     @PutMapping(
-            path = "/api/ktp/{id}",
+            path = "/ktp/{id}",
             consumes = MediaType.APPLICATION_JSON_VALUE,
             produces = MediaType.APPLICATION_JSON_VALUE
     )
@@ -68,7 +68,7 @@ public class KtpController {
     }
 
     @DeleteMapping(
-            path = "/api/ktp/{id}",
+            path = "/ktp/{id}",
             produces = MediaType.APPLICATION_JSON_VALUE
     )
     public ResponseEntity<Map<String, Object>> DeleteKtp(@PathVariable("id") int id) {
